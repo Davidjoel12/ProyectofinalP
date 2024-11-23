@@ -1,5 +1,6 @@
 package ProyectoFinal.ProyectofinalP;
 
+import java.sql.Statement;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -18,7 +19,7 @@ public class conexion {
         private String consulta;
         
         
-       public void Hilton() throws SQLException {
+       public void Hilton() {
             Scanner scaner = new Scanner(System.in);
 
             System.out.println("Bienvenido, desea:");
@@ -34,41 +35,94 @@ public class conexion {
 
                 switch(eleccion) {
                     case 1 -> {
-                        System.out.println("Ingrese la fecha inicial de su reserva:");
+                        System.out.println("Ingrese su nombre");
+                        String nombreCliente = scaner.nextLine();
+                        System.out.println("--------------------");
+                              
+                        System.out.println("Ingrese su correo");
+                        String correoCliente = scaner.nextLine();
+                        
+                        System.out.println("Ingrese su telefono");
+                        String telefonoCliente = scaner.nextLine();
+
+                        // Insertar datos en la tabla Cliente
+                        String consultaCliente = "INSERT INTO Cliente (Nombre, Correo, Telefono) VALUES ('" +
+                                                  nombreCliente + "', '" + correoCliente + "', '" + telefonoCliente + "')";
+                        Statement stmtCliente =  conn.createStatement();
+                        int filasCliente = stmtCliente.executeUpdate(consultaCliente);
+
+                        if (filasCliente > 0) {
+                            System.out.println("Cliente registrado correctamente.");
+                        } else {
+                            System.out.println("Error al registrar al cliente.");
+                            return;
+                        }
+
+                        // Obtener el IDCliente recién registrado
+                        String consultaIDCliente = "SELECT MAX(IDCliente) AS IDCliente FROM Cliente";
+                        ResultSet rsCliente = stmtCliente.executeQuery(consultaIDCliente);
+                        int idCliente = 0;
+                        if (rsCliente.next()) {
+                            idCliente = rsCliente.getInt("IDCliente");
+                        }
+
+                        // Paso 2: Solicitar tipo de habitación
+                        System.out.println("Seleccione el tipo de habitación:");
+                        System.out.println("1. Cama Matrimonial");
+                        System.out.println("2. Dos Camas");
+                        System.out.println("3. Una Cama Matrimonial y una Pequeña Cama");
+                        int opcionHabitacion = scaner.nextInt();
+                        scaner.nextLine(); // Limpiar el buffer
+
+                        int idHabitacion;
+                        switch (opcionHabitacion) {
+                            case 1 -> idHabitacion = 1; // ID de la habitación con Cama Matrimonial
+                            case 2 -> idHabitacion = 2; // ID de la habitación con Dos Camas
+                            case 3 -> idHabitacion = 3; // ID de la habitación con Matrimonial + Pequeña
+                            default -> {
+                                System.out.println("Opción inválida. Intente de nuevo.");
+                                return;
+                            }
+                        }
+
+                        // Paso 3: Solicitar fechas de la reserva
+                        System.out.println("Ingrese la fecha inicial de su reserva (formato: yyyy-MM-dd HH:mm:ss):");
                         String fechaInicio = scaner.nextLine();
-                        System.out.println("Ingrese la fecha final de su reserva:");
+                        System.out.println("Ingrese la fecha final de su reserva (formato: yyyy-MM-dd HH:mm:ss):");
                         String fechaFin = scaner.nextLine();
 
-                        try {
-                            consulta = "INSERT INTO Reserva (FechaInicio, FechaFin) VALUES ('" + fechaInicio + "', '" + fechaFin + "')";
-                            prepararConsulta = conn.createStatement();
+                        // Insertar datos en la tabla Reserva
+                        String consultaReserva = "INSERT INTO Reserva (IDUsuario, IDHabitacion, FechaInicio, FechaFin, Estado) " +
+                                                 "VALUES (" + idCliente + ", " + idHabitacion + ", '" + fechaInicio + "', '" + fechaFin + "', 'Activa')";
+                        Statement stmtReserva = conn.createStatement();
+                        int filasReserva = stmtReserva.executeUpdate(consultaReserva);
 
-                            int filasInsertadas = prepararConsulta.executeUpdate(consulta);
+                        if (filasReserva > 0) {
+                            // Obtener el IDReserva recién creado
+                            String consultaIDReserva = "SELECT MAX(IDReserva) AS IDReserva FROM Reserva";
+                            ResultSet rsReserva = stmtReserva.executeQuery(consultaIDReserva);
 
-                            if (filasInsertadas > 0) {
-                                consulta = "SELECT IDReserva FROM Reserva WHERE IDReserva = (SELECT MAX(IDReserva) FROM Reserva)";
-                                ResultSet rs = prepararConsulta.executeQuery(consulta);
-
-                                if (rs.next()) {
-                                    int numeroDeReserva = rs.getInt("IDReserva");
-                                    System.out.println("Reserva creada exitosamente.");
-                                    System.out.println("Su numero de reserva es: " + numeroDeReserva);
-                                } else {
-                                    System.out.println("No se pudo obtener el número de la cuenta.");
-                                }
+                            if (rsReserva.next()) {
+                                int numeroDeReserva = rsReserva.getInt("IDReserva");
+                                System.out.println("Reserva creada exitosamente.");
+                                System.out.println("Su número de reserva es: " + numeroDeReserva);
                             } else {
-                                System.out.println("Error al crear la cuenta.");
+                                System.out.println("No se pudo obtener el número de la reserva.");
                             }
-                        } catch (SQLException e) {
-                            System.out.println("Ocurrió un error al realizar la reserva.");
-                            e.printStackTrace();
+                        } else {
+                            System.out.println("Error al crear la reserva.");
                         }
                     }
                     case 2 -> {
                         System.out.println("Ingrese el número de reserva:");
                         int numeroReserva = scaner.nextInt();
+                        scaner.nextLine();
                         
-                        consulta = "SELECT * FROM Rserva Where IDReserva = "+ numeroReserva +")";
+                        consulta = "SELECT Cliente.Nombre, Habitacion.TipoHabitacion, FechaInicio, FechaFin, Estado" +
+                                    "FROM ((Reserva" +
+                                    "INNER JOIN Cliente ON Reserva.IDReserva = Cliente.IDCliente)"+
+                                    "INNER JOIN Habitacion ON Reserva.IDReserva = Habitacion.IDHabitacion)"+
+                                    "Where IDReserva ="+ numeroReserva +";";
 
                         try {
                             java.sql.Statement stmt = conn.createStatement();
@@ -77,42 +131,35 @@ public class conexion {
                             ejecucion = stmt.executeQuery(consulta);
 
 
-                            System.out.printf("%-10s %-30s %-20s %-10s %-10s %-10s%n", "Reserva", "Usuario", "Habitacion", "FechaInicio", "FechaFin", "Estado");
+                            System.out.printf("%-10s %-30s %-20s %-10s %-10s%n", "Nombre", "TipoHabitacion", "FechaInicio", "FechaFin", "Estado");
                             System.out.println("---------------------------------------------------------------------------");
                             while (ejecucion.next()) {
-                                String id = ejecucion.getString("IDReserva");
-                                String usuario = ejecucion.getString("IDUsuario");
-                                String habitacion = ejecucion.getString("IDHabitacion");
+                                String usuario = ejecucion.getString("Nombre");
+                                String habitacion = ejecucion.getString("TipoHabitacion");
                                 String fechaI = ejecucion.getString("FechaInicio");
                                 String fechaF = ejecucion.getString("FechaFin");
                                 String estado = ejecucion.getString("Estado");
-                                System.out.printf("%-10s %-30s %-20s %-10s %-10s%n",id,usuario, habitacion, fechaI, fechaF, estado);
+                                System.out.printf("%-10s %-30s %-20s %-10s %-10s%n",usuario, habitacion, fechaI, fechaF, estado);
                             }
 
+                            System.out.println("Ingrese el ajuste de fechas:");
+                            System.out.print("Fecha Inicio (YYYY-MM-DD): ");
+                            String nuevaFechaInicio = scaner.nextLine();
+                            System.out.print("Fecha Fin (YYYY-MM-DD): ");
+                            String nuevaFechaFin = scaner.nextLine();
+
+                            String actualizarConsulta = "UPDATE Reserva SET FechaInicio = '" + nuevaFechaInicio + "', FechaFin = '" + nuevaFechaFin + "' WHERE IDReserva = " + numeroReserva;
+
+                            int filasActualizadas = stmt.executeUpdate(actualizarConsulta);
+
+                            if (filasActualizadas > 0) {
+                                System.out.println("Las fechas se han actualizado exitosamente.");
+                            } else {
+                                System.out.println("Error: no se encontró una reserva con ese número.");
+                            }
                         } catch (SQLException e) {
                             System.out.println("Ocurrió un error al realizar la reserva.");
                             e.printStackTrace();
-                        }
-                        
-                        
-                        System.out.println("Ingrese el ajuste de fechas:");
-                        System.out.println("Fecha Inicio:");
-                        String fechaI = scaner.nextLine();
-                        System.out.println("Fecha Fin:");
-                        String fechaF = scaner.nextLine();
-
-                        if (fechaI > 0) {
-                            consulta = "UPDATE Reserva SET FechaInicio and FechaFin =  + " + fechaI + " WHERE IDReserva = " + numeroReserva;
-                            prepararConsulta = conn.createStatement();
-                            int filasActualizadas = prepararConsulta.executeUpdate(consulta);
-
-                            if (filasActualizadas > 0) {
-                                System.out.println("Deposito realizado exitosamente.");
-                            } else {
-                                System.out.println("Error al realizar el deposito.");
-                            }
-                        } else {
-                            System.out.println("El deposito debe ser mayor a cero.");
                         }
                     }
                     case 3 -> {
@@ -123,14 +170,14 @@ public class conexion {
                         String confirmacion = scaner.next();
 
                         if (confirmacion.equalsIgnoreCase("si")) {
-                            consulta = "DELETE FROM Rserva WHERE IDReserva = " + numeroReserva;
+                            consulta = "DELETE FROM Reserva WHERE IDReserva = " + numeroReserva;
                             prepararConsulta = conn.createStatement();
                             int filasEliminadas = prepararConsulta.executeUpdate(consulta);
 
                             if (filasEliminadas > 0) {
-                                System.out.println("Cuenta eliminada exitosamente.");
+                                System.out.println("Reserva eliminada exitosamente.");
                             } else {
-                                System.out.println("No se encontro la cuenta o no se pudo eliminar.");
+                                System.out.println("No se encontro la reserva o no se pudo eliminar.");
                             }
                         } else {
                             System.out.println("Transacción no realizada.");
@@ -155,11 +202,8 @@ public class conexion {
 
 
 
-        
-
-
-        
-        public void Marbella() throws SQLException {
+       
+        public void Marbella()  {
             Scanner scaner = new Scanner(System.in);
 
             System.out.println("Bienvenido, desea:");
@@ -175,40 +219,94 @@ public class conexion {
 
                 switch(eleccion) {
                     case 1 -> {
-                        System.out.println("Ingrese la fecha inicial de su reserva:");
+                        System.out.println("Ingrese su nombre");
+                        String nombreCliente = scaner.nextLine();
+                        System.out.println("--------------------");
+                              
+                        System.out.println("Ingrese su correo");
+                        String correoCliente = scaner.nextLine();
+                        
+                        System.out.println("Ingrese su telefono");
+                        String telefonoCliente = scaner.nextLine();
+
+                        // Insertar datos en la tabla Cliente
+                        String consultaCliente = "INSERT INTO Cliente (Nombre, Correo, Telefono) VALUES ('" +
+                                                  nombreCliente + "', '" + correoCliente + "', '" + telefonoCliente + "')";
+                        Statement stmtCliente =  conn.createStatement();
+                        int filasCliente = stmtCliente.executeUpdate(consultaCliente);
+
+                        if (filasCliente > 0) {
+                            System.out.println("Cliente registrado correctamente.");
+                        } else {
+                            System.out.println("Error al registrar al cliente.");
+                            return;
+                        }
+
+                        // Obtener el IDCliente recién registrado
+                        String consultaIDCliente = "SELECT MAX(IDCliente) AS IDCliente FROM Cliente";
+                        ResultSet rsCliente = stmtCliente.executeQuery(consultaIDCliente);
+                        int idCliente = 0;
+                        if (rsCliente.next()) {
+                            idCliente = rsCliente.getInt("IDCliente");
+                        }
+
+                        // Paso 2: Solicitar tipo de habitación
+                        System.out.println("Seleccione el tipo de habitación:");
+                        System.out.println("1. Cama Matrimonial");
+                        System.out.println("2. Dos Camas");
+                        System.out.println("3. Una Cama Matrimonial y una Pequeña Cama");
+                        int opcionHabitacion = scaner.nextInt();
+                        scaner.nextLine(); // Limpiar el buffer
+
+                        int idHabitacion;
+                        switch (opcionHabitacion) {
+                            case 1 -> idHabitacion = 1; // ID de la habitación con Cama Matrimonial
+                            case 2 -> idHabitacion = 2; // ID de la habitación con Dos Camas
+                            case 3 -> idHabitacion = 3; // ID de la habitación con Matrimonial + Pequeña
+                            default -> {
+                                System.out.println("Opción inválida. Intente de nuevo.");
+                                return;
+                            }
+                        }
+
+                        // Paso 3: Solicitar fechas de la reserva
+                        System.out.println("Ingrese la fecha inicial de su reserva (formato: yyyy-MM-dd HH:mm:ss):");
                         String fechaInicio = scaner.nextLine();
-                        System.out.println("Ingrese la fecha final de su reserva:");
+                        System.out.println("Ingrese la fecha final de su reserva (formato: yyyy-MM-dd HH:mm:ss):");
                         String fechaFin = scaner.nextLine();
 
-                        if (fechaInicio >= 0) {
-                            consulta = "INSERT INTO Reserva (FechaInicio, FechaFin) VALUES (" + fechaInicio + fechaFin +")";
-                            prepararConsulta = conn.createStatement();
+                        // Insertar datos en la tabla Reserva
+                        String consultaReserva = "INSERT INTO Reserva (IDUsuario, IDHabitacion, FechaInicio, FechaFin, Estado) " +
+                                                 "VALUES (" + idCliente + ", " + idHabitacion + ", '" + fechaInicio + "', '" + fechaFin + "', 'Activa')";
+                        Statement stmtReserva = conn.createStatement();
+                        int filasReserva = stmtReserva.executeUpdate(consultaReserva);
 
-                            int filasInsertadas = prepararConsulta.executeUpdate(consulta);
+                        if (filasReserva > 0) {
+                            // Obtener el IDReserva recién creado
+                            String consultaIDReserva = "SELECT MAX(IDReserva) AS IDReserva FROM Reserva";
+                            ResultSet rsReserva = stmtReserva.executeQuery(consultaIDReserva);
 
-                            if (filasInsertadas > 0) {
-                                consulta = "SELECT IDReserva FROM Reserva WHERE IDReserva = (SELECT MAX(IDReserva) FROM Reserva)";
-                                ResultSet rs = prepararConsulta.executeQuery(consulta);
-
-                                if (rs.next()) {
-                                    int numeroDeReserva = rs.getInt("IDReserva");
-                                    System.out.println("Reserva creada exitosamente.");
-                                    System.out.println("Su numero de reserva es: " + numeroDeReserva);
-                                } else {
-                                    System.out.println("No se pudo obtener el número de la cuenta.");
-                                }
+                            if (rsReserva.next()) {
+                                int numeroDeReserva = rsReserva.getInt("IDReserva");
+                                System.out.println("Reserva creada exitosamente.");
+                                System.out.println("Su número de reserva es: " + numeroDeReserva);
                             } else {
-                                System.out.println("Error al crear la cuenta.");
+                                System.out.println("No se pudo obtener el número de la reserva.");
                             }
                         } else {
-                            System.out.println("El saldo inicial no puede ser negativo.");
+                            System.out.println("Error al crear la reserva.");
                         }
                     }
                     case 2 -> {
                         System.out.println("Ingrese el número de reserva:");
                         int numeroReserva = scaner.nextInt();
+                        scaner.nextLine();
                         
-                        consulta = "SELECT * FROM Rserva Where IDReserva = "+ numeroReserva +")";
+                        consulta = "SELECT Cliente.Nombre, Habitacion.TipoHabitacion, FechaInicio, FechaFin, Estado" +
+                                    "FROM ((Reserva" +
+                                    "INNER JOIN Cliente ON Reserva.IDReserva = Cliente.IDCliente)"+
+                                    "INNER JOIN Habitacion ON Reserva.IDReserva = Habitacion.IDHabitacion)"+
+                                    "Where IDReserva ="+ numeroReserva +";";
 
                         try {
                             java.sql.Statement stmt = conn.createStatement();
@@ -217,37 +315,35 @@ public class conexion {
                             ejecucion = stmt.executeQuery(consulta);
 
 
-                            System.out.printf("%-10s %-30s %-20s %-10s %-10s %-10s%n", "Reserva", "Usuario", "Habitacion", "FechaInicio", "FechaFin", "Estado");
+                            System.out.printf("%-10s %-30s %-20s %-10s %-10s%n", "Nombre", "TipoHabitacion", "FechaInicio", "FechaFin", "Estado");
                             System.out.println("---------------------------------------------------------------------------");
                             while (ejecucion.next()) {
-                                String id = ejecucion.getString("IDReserva");
-                                String usuario = ejecucion.getString("IDUsuario");
-                                String habitacion = ejecucion.getString("IDHabitacion");
+                                String usuario = ejecucion.getString("Nombre");
+                                String habitacion = ejecucion.getString("TipoHabitacion");
                                 String fechaI = ejecucion.getString("FechaInicio");
                                 String fechaF = ejecucion.getString("FechaFin");
                                 String estado = ejecucion.getString("Estado");
-                                System.out.printf("%-10s %-30s %-20s %-10s %-10s%n",id,usuario, habitacion, fechaI, fechaF, estado);
-
+                                System.out.printf("%-10s %-30s %-20s %-10s %-10s%n",usuario, habitacion, fechaI, fechaF, estado);
                             }
-                        
-                        System.out.println("Ingrese el ajuste de fechas:");
-                        System.out.println("Fecha Inicio:");
-                        String fechaI = scaner.nextLine();
-                        System.out.println("Fecha Fin:");
-                        String fechaF = scaner.nextLine();
 
-                        if (fechaI > 0) {
-                            consulta = "UPDATE Reserva SET FechaInicio and FechaFin =  + " + fechaI + " WHERE IDReserva = " + numeroReserva;
-                            prepararConsulta = conn.createStatement();
-                            int filasActualizadas = prepararConsulta.executeUpdate(consulta);
+                            System.out.println("Ingrese el ajuste de fechas:");
+                            System.out.print("Fecha Inicio (YYYY-MM-DD): ");
+                            String nuevaFechaInicio = scaner.nextLine();
+                            System.out.print("Fecha Fin (YYYY-MM-DD): ");
+                            String nuevaFechaFin = scaner.nextLine();
+
+                            String actualizarConsulta = "UPDATE Reserva SET FechaInicio = '" + nuevaFechaInicio + "', FechaFin = '" + nuevaFechaFin + "' WHERE IDReserva = " + numeroReserva;
+
+                            int filasActualizadas = stmt.executeUpdate(actualizarConsulta);
 
                             if (filasActualizadas > 0) {
-                                System.out.println("Deposito realizado exitosamente.");
+                                System.out.println("Las fechas se han actualizado exitosamente.");
                             } else {
-                                System.out.println("Error al realizar el deposito.");
+                                System.out.println("Error: no se encontró una reserva con ese número.");
                             }
-                        } else {
-                            System.out.println("El deposito debe ser mayor a cero.");
+                        } catch (SQLException e) {
+                            System.out.println("Ocurrió un error al realizar la reserva.");
+                            e.printStackTrace();
                         }
                     }
                     case 3 -> {
@@ -258,14 +354,14 @@ public class conexion {
                         String confirmacion = scaner.next();
 
                         if (confirmacion.equalsIgnoreCase("si")) {
-                            consulta = "DELETE FROM IDRserva WHERE IDReserva = " + numeroReserva;
+                            consulta = "DELETE FROM Reserva WHERE IDReserva = " + numeroReserva;
                             prepararConsulta = conn.createStatement();
                             int filasEliminadas = prepararConsulta.executeUpdate(consulta);
 
                             if (filasEliminadas > 0) {
-                                System.out.println("Cuenta eliminada exitosamente.");
+                                System.out.println("Reserva eliminada exitosamente.");
                             } else {
-                                System.out.println("No se encontro la cuenta o no se pudo eliminar.");
+                                System.out.println("No se encontro la reserva o no se pudo eliminar.");
                             }
                         } else {
                             System.out.println("Transacción no realizada.");
@@ -295,7 +391,7 @@ public class conexion {
         
         
         public void Marriot() {
-            Scanner scaner = new Scanner(System.in);
+             Scanner scaner = new Scanner(System.in);
 
             System.out.println("Bienvenido, desea:");
             System.out.println("(1) Crear una reserva");
@@ -310,40 +406,94 @@ public class conexion {
 
                 switch(eleccion) {
                     case 1 -> {
-                        System.out.println("Ingrese la fecha inicial de su reserva:");
+                        System.out.println("Ingrese su nombre");
+                        String nombreCliente = scaner.nextLine();
+                        System.out.println("--------------------");
+                              
+                        System.out.println("Ingrese su correo");
+                        String correoCliente = scaner.nextLine();
+                        
+                        System.out.println("Ingrese su telefono");
+                        String telefonoCliente = scaner.nextLine();
+
+                        // Insertar datos en la tabla Cliente
+                        String consultaCliente = "INSERT INTO Cliente (Nombre, Correo, Telefono) VALUES ('" +
+                                                  nombreCliente + "', '" + correoCliente + "', '" + telefonoCliente + "')";
+                        Statement stmtCliente =  conn.createStatement();
+                        int filasCliente = stmtCliente.executeUpdate(consultaCliente);
+
+                        if (filasCliente > 0) {
+                            System.out.println("Cliente registrado correctamente.");
+                        } else {
+                            System.out.println("Error al registrar al cliente.");
+                            return;
+                        }
+
+                        // Obtener el IDCliente recién registrado
+                        String consultaIDCliente = "SELECT MAX(IDCliente) AS IDCliente FROM Cliente";
+                        ResultSet rsCliente = stmtCliente.executeQuery(consultaIDCliente);
+                        int idCliente = 0;
+                        if (rsCliente.next()) {
+                            idCliente = rsCliente.getInt("IDCliente");
+                        }
+
+                        // Paso 2: Solicitar tipo de habitación
+                        System.out.println("Seleccione el tipo de habitación:");
+                        System.out.println("1. Cama Matrimonial");
+                        System.out.println("2. Dos Camas");
+                        System.out.println("3. Una Cama Matrimonial y una Pequeña Cama");
+                        int opcionHabitacion = scaner.nextInt();
+                        scaner.nextLine(); // Limpiar el buffer
+
+                        int idHabitacion;
+                        switch (opcionHabitacion) {
+                            case 1 -> idHabitacion = 1; // ID de la habitación con Cama Matrimonial
+                            case 2 -> idHabitacion = 2; // ID de la habitación con Dos Camas
+                            case 3 -> idHabitacion = 3; // ID de la habitación con Matrimonial + Pequeña
+                            default -> {
+                                System.out.println("Opción inválida. Intente de nuevo.");
+                                return;
+                            }
+                        }
+
+                        // Paso 3: Solicitar fechas de la reserva
+                        System.out.println("Ingrese la fecha inicial de su reserva (formato: yyyy-MM-dd HH:mm:ss):");
                         String fechaInicio = scaner.nextLine();
-                        System.out.println("Ingrese la fecha final de su reserva:");
+                        System.out.println("Ingrese la fecha final de su reserva (formato: yyyy-MM-dd HH:mm:ss):");
                         String fechaFin = scaner.nextLine();
 
-                        if (fechaInicio >= 0) {
-                            consulta = "INSERT INTO Reserva (FechaInicio, FechaFin) VALUES (" + fechaInicio + fechaFin +")";
-                            prepararConsulta = conn.createStatement();
+                        // Insertar datos en la tabla Reserva
+                        String consultaReserva = "INSERT INTO Reserva (IDUsuario, IDHabitacion, FechaInicio, FechaFin, Estado) " +
+                                                 "VALUES (" + idCliente + ", " + idHabitacion + ", '" + fechaInicio + "', '" + fechaFin + "', 'Activa')";
+                        Statement stmtReserva = conn.createStatement();
+                        int filasReserva = stmtReserva.executeUpdate(consultaReserva);
 
-                            int filasInsertadas = prepararConsulta.executeUpdate(consulta);
+                        if (filasReserva > 0) {
+                            // Obtener el IDReserva recién creado
+                            String consultaIDReserva = "SELECT MAX(IDReserva) AS IDReserva FROM Reserva";
+                            ResultSet rsReserva = stmtReserva.executeQuery(consultaIDReserva);
 
-                            if (filasInsertadas > 0) {
-                                consulta = "SELECT IDReserva FROM Reserva WHERE IDReserva = (SELECT MAX(IDReserva) FROM Reserva)";
-                                ResultSet rs = prepararConsulta.executeQuery(consulta);
-
-                                if (rs.next()) {
-                                    int numeroDeReserva = rs.getInt("IDReserva");
-                                    System.out.println("Reserva creada exitosamente.");
-                                    System.out.println("Su numero de reserva es: " + numeroDeReserva);
-                                } else {
-                                    System.out.println("No se pudo obtener el número de la cuenta.");
-                                }
+                            if (rsReserva.next()) {
+                                int numeroDeReserva = rsReserva.getInt("IDReserva");
+                                System.out.println("Reserva creada exitosamente.");
+                                System.out.println("Su número de reserva es: " + numeroDeReserva);
                             } else {
-                                System.out.println("Error al crear la cuenta.");
+                                System.out.println("No se pudo obtener el número de la reserva.");
                             }
                         } else {
-                            System.out.println("El saldo inicial no puede ser negativo.");
+                            System.out.println("Error al crear la reserva.");
                         }
                     }
                     case 2 -> {
                         System.out.println("Ingrese el número de reserva:");
                         int numeroReserva = scaner.nextInt();
+                        scaner.nextLine();
                         
-                        consulta = "SELECT * FROM Rserva Where IDReserva = "+ numeroReserva +")";
+                        consulta = "SELECT Cliente.Nombre, Habitacion.TipoHabitacion, FechaInicio, FechaFin, Estado" +
+                                    "FROM ((Reserva" +
+                                    "INNER JOIN Cliente ON Reserva.IDReserva = Cliente.IDCliente)"+
+                                    "INNER JOIN Habitacion ON Reserva.IDReserva = Habitacion.IDHabitacion)"+
+                                    "Where IDReserva ="+ numeroReserva +";";
 
                         try {
                             java.sql.Statement stmt = conn.createStatement();
@@ -352,37 +502,35 @@ public class conexion {
                             ejecucion = stmt.executeQuery(consulta);
 
 
-                            System.out.printf("%-10s %-30s %-20s %-10s %-10s %-10s%n", "Reserva", "Usuario", "Habitacion", "FechaInicio", "FechaFin", "Estado");
+                            System.out.printf("%-10s %-30s %-20s %-10s %-10s%n", "Nombre", "TipoHabitacion", "FechaInicio", "FechaFin", "Estado");
                             System.out.println("---------------------------------------------------------------------------");
                             while (ejecucion.next()) {
-                                String id = ejecucion.getString("IDReserva");
-                                String usuario = ejecucion.getString("IDUsuario");
-                                String habitacion = ejecucion.getString("IDHabitacion");
+                                String usuario = ejecucion.getString("Nombre");
+                                String habitacion = ejecucion.getString("TipoHabitacion");
                                 String fechaI = ejecucion.getString("FechaInicio");
                                 String fechaF = ejecucion.getString("FechaFin");
                                 String estado = ejecucion.getString("Estado");
-                                System.out.printf("%-10s %-30s %-20s %-10s %-10s%n",id,usuario, habitacion, fechaI, fechaF, estado);
-
+                                System.out.printf("%-10s %-30s %-20s %-10s %-10s%n",usuario, habitacion, fechaI, fechaF, estado);
                             }
-                        
-                        System.out.println("Ingrese el ajuste de fechas:");
-                        System.out.println("Fecha Inicio:");
-                        String fechaI = scaner.nextLine();
-                        System.out.println("Fecha Fin:");
-                        String fechaF = scaner.nextLine();
 
-                        if (fechaI > 0) {
-                            consulta = "UPDATE Reserva SET FechaInicio and FechaFin =  + " + fechaI + " WHERE IDReserva = " + numeroReserva;
-                            prepararConsulta = conn.createStatement();
-                            int filasActualizadas = prepararConsulta.executeUpdate(consulta);
+                            System.out.println("Ingrese el ajuste de fechas:");
+                            System.out.print("Fecha Inicio (YYYY-MM-DD): ");
+                            String nuevaFechaInicio = scaner.nextLine();
+                            System.out.print("Fecha Fin (YYYY-MM-DD): ");
+                            String nuevaFechaFin = scaner.nextLine();
+
+                            String actualizarConsulta = "UPDATE Reserva SET FechaInicio = '" + nuevaFechaInicio + "', FechaFin = '" + nuevaFechaFin + "' WHERE IDReserva = " + numeroReserva;
+
+                            int filasActualizadas = stmt.executeUpdate(actualizarConsulta);
 
                             if (filasActualizadas > 0) {
-                                System.out.println("Deposito realizado exitosamente.");
+                                System.out.println("Las fechas se han actualizado exitosamente.");
                             } else {
-                                System.out.println("Error al realizar el deposito.");
+                                System.out.println("Error: no se encontró una reserva con ese número.");
                             }
-                        } else {
-                            System.out.println("El deposito debe ser mayor a cero.");
+                        } catch (SQLException e) {
+                            System.out.println("Ocurrió un error al realizar la reserva.");
+                            e.printStackTrace();
                         }
                     }
                     case 3 -> {
@@ -393,14 +541,14 @@ public class conexion {
                         String confirmacion = scaner.next();
 
                         if (confirmacion.equalsIgnoreCase("si")) {
-                            consulta = "DELETE FROM IDRserva WHERE IDReserva = " + numeroReserva;
+                            consulta = "DELETE FROM Reserva WHERE IDReserva = " + numeroReserva;
                             prepararConsulta = conn.createStatement();
                             int filasEliminadas = prepararConsulta.executeUpdate(consulta);
 
                             if (filasEliminadas > 0) {
-                                System.out.println("Cuenta eliminada exitosamente.");
+                                System.out.println("Reserva eliminada exitosamente.");
                             } else {
-                                System.out.println("No se encontro la cuenta o no se pudo eliminar.");
+                                System.out.println("No se encontro la reserva o no se pudo eliminar.");
                             }
                         } else {
                             System.out.println("Transacción no realizada.");
@@ -420,10 +568,7 @@ public class conexion {
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
-            }
-        }
-
-        
+            }  
     }
 
 }
