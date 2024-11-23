@@ -1,0 +1,11 @@
+INSERT INTO Hotel (NombreHotel, Direccion , Ciudad, Telefono)
+VALUES ('Hilton', 'Balboa Avenida &, C. Aquilino de la Guardia, Panamá', 'Panama', '280-8000'),
+VALUES ('Marbella', 'XFPF+F8R, C. Hercilia Lamela', 'Panama', '263-2220'),
+VALUES ('Marriott', 'San Francisco, Cl. Punta Colón', 'Panama', '215-8800');
+------------------------------------------------------------------------------------------------
+INSERT INTO Reserva  (FechaInicio, FechaFin, Estado)
+VALUES 
+('2024-12-01', '2024-12-05', 'Confirmada'),
+('2024-12-10', '2024-12-15', 'Pendiente');
+Al ingresar estos registros las columnas IDUsuario y IDHabitacion quedan Null ya que aun no he trabajado el tipo de habitaciones y sus numeros de habitaciones
+---------------------------------------------------------------------------------------------
