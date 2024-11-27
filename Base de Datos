@@ -1,11 +1,82 @@
-INSERT INTO Hotel (NombreHotel, Direccion , Ciudad, Telefono)
-VALUES ('Hilton', 'Balboa Avenida &, C. Aquilino de la Guardia, Panamá', 'Panama', '280-8000'),
-VALUES ('Marbella', 'XFPF+F8R, C. Hercilia Lamela', 'Panama', '263-2220'),
-VALUES ('Marriott', 'San Francisco, Cl. Punta Colón', 'Panama', '215-8800');
-------------------------------------------------------------------------------------------------
-INSERT INTO Reserva  (FechaInicio, FechaFin, Estado)
-VALUES 
-('2024-12-01', '2024-12-05', 'Confirmada'),
-('2024-12-10', '2024-12-15', 'Pendiente');
-Al ingresar estos registros las columnas IDUsuario y IDHabitacion quedan Null ya que aun no he trabajado el tipo de habitaciones y sus numeros de habitaciones
----------------------------------------------------------------------------------------------
+-- Tabla de Roles
+CREATE TABLE Roles (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre NVARCHAR(50) NOT NULL UNIQUE,
+    descripcion NVARCHAR(MAX)
+);
+
+-- Tabla de Personal del Hotel
+CREATE TABLE Personal (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre NVARCHAR(100) NOT NULL,
+    apellido NVARCHAR(100) NOT NULL,
+    correo NVARCHAR(100) UNIQUE NOT NULL,
+    telefono NVARCHAR(15),
+    rol_id INT NOT NULL,
+    contraseña NVARCHAR(255) NOT NULL,
+    FOREIGN KEY (rol_id) REFERENCES Roles(id)
+);
+
+-- Tabla de Huéspedes
+CREATE TABLE Huespedes (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre NVARCHAR(100) NOT NULL,
+    apellido NVARCHAR(100) NOT NULL,
+    correo NVARCHAR(100) UNIQUE,
+    telefono NVARCHAR(15),
+    fecha_registro DATETIME DEFAULT GETDATE()
+);
+
+-- Tabla de Habitaciones
+CREATE TABLE Habitaciones (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    numero_habitacion NVARCHAR(10) NOT NULL UNIQUE,
+    tipo NVARCHAR(50) NOT NULL, -- Ejemplo: "Individual", "Doble", "Suite"
+    precio DECIMAL(10, 2) NOT NULL,
+    estado NVARCHAR(20) DEFAULT 'Disponible', -- Valores: Disponible, Ocupada, Mantenimiento
+    descripcion NVARCHAR(MAX)
+);
+
+-- Tabla de Servicios Adicionales
+CREATE TABLE Servicios (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre NVARCHAR(100) NOT NULL,
+    descripcion NVARCHAR(MAX),
+    precio DECIMAL(10, 2) NOT NULL
+);
+
+-- Tabla de Reservas
+CREATE TABLE Reservas (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    huesped_id INT NOT NULL,
+    habitacion_id INT NOT NULL,
+    fecha_entrada DATE NOT NULL,
+    fecha_salida DATE NOT NULL,
+    estado NVARCHAR(20) DEFAULT 'Confirmada', -- Valores: Confirmada, Cancelada, Finalizada
+    FOREIGN KEY (huesped_id) REFERENCES Huespedes(id),
+    FOREIGN KEY (habitacion_id) REFERENCES Habitaciones(id)
+);
+
+-- Tabla de Servicios Usados
+CREATE TABLE Servicios_Usados (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    reserva_id INT NOT NULL,
+    servicio_id INT NOT NULL,
+    cantidad INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (reserva_id) REFERENCES Reservas(id),
+    FOREIGN KEY (servicio_id) REFERENCES Servicios(id)
+);
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+-- Restricción para el estado de Habitaciones
+ALTER TABLE Habitaciones
+ADD CONSTRAINT chk_estado_habitaciones
+CHECK (estado IN ('Disponible', 'Ocupada', 'Mantenimiento'));
+
+-- Restricción para el estado de Reservas
+ALTER TABLE Reservas
+ADD CONSTRAINT chk_estado_reservas
+CHECK (estado IN ('Confirmada', 'Cancelada', 'Finalizada'));
+
